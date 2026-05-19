@@ -5,12 +5,19 @@ open import Cubical.Foundations.HLevels
 
 open import Cubical.Data.List as List
 open import Cubical.Data.Nat
-open import Cubical.Data.Nat.Order
+open import Cubical.Data.Nat.Order using (_<_)
 open import Cubical.Data.Empty as Empty
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum as Sum
 
+open import Cubical.Relation.Binary using (Rel)
+open import Cubical.Relation.Binary.Properties using (pulledbackRel)
+
 module _ {ℓ : Level} {A : Type ℓ} where
+
+  onLengthOrder : Rel (List A) (List A) ℓ-zero
+  onLengthOrder = pulledbackRel List.length _<_
+
   revLength : (xs : List A) → length xs ≡ length (rev xs)
   revLength [] = refl
   revLength (x ∷ xs) =
