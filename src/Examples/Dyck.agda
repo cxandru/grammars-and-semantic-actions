@@ -68,6 +68,53 @@ DyckTy _ = ⊕e DyckTag (λ
   { nil' → k ε
   ; balanced' → (k (literal [)) ⊗e (Var _) ⊗e (k (literal ]) ⊗e (Var _)) })
 
+open import Cubical.Data.List using (length ; length++)
+open import Cubical.Data.List.More using (onLengthOrder)
+import Cubical.Data.Nat.Order as NatOrder
+open NatOrder using (suc-≤-suc ; ≤SumLeft ; ≤SumRight ; ≤-sucℕ ; ≤-trans)
+open import IRC.IntrinsicallyRecursiveCoalgs {A = String} (onLengthOrder)
+
+private
+  variable
+   ℓ : Level
+DyckF : Grammar ℓ → Grammar ℓ
+DyckF X = ⟦ DyckTy _ ⟧ (λ _ → X)
+
+opaque
+  unfolding _⊗_ literal
+  DyckFwf : (i : String) (r : Grammar ℓ) → ([ DyckF ]'< i (r |< i)) → (DyckF) r i
+  DyckFwf i r (nil' , x) = nil' , x
+  DyckFwf i r (balanced' , s₁ , lift lp , s₂ , lift f₁ , s₃ , lift rp , lift f₂) =
+    balanced' , s₁ , lift lp , s₂ , lift (f₁ pf₁) , s₃ , lift rp , lift (f₂ pf₂)
+    where
+    w₂ : String
+    w₂ = s₂ .fst .fst
+    w₄ : String
+    w₄ = s₃ .fst .snd
+    wrest : String
+    wrest = s₁ .fst .snd
+    wrest2 : String
+    wrest2 = s₂ .fst .snd
+
+    len-wrest2 : length wrest2 ≡ suc (length w₄)
+    len-wrest2 = cong length (s₃ .snd) ∙ length++ (s₃ .fst .fst) w₄
+               ∙ cong (λ n → n + length w₄) (cong length rp)
+
+    len-wrest : length wrest ≡ length w₂ + suc (length w₄)
+    len-wrest = cong length (s₂ .snd) ∙ length++ w₂ wrest2
+              ∙ cong (λ n → length w₂ + n) len-wrest2
+
+    len-i : length i ≡ suc (length w₂ + suc (length w₄))
+    len-i = cong length (s₁ .snd) ∙ length++ (s₁ .fst .fst) wrest
+          ∙ cong (λ n → n + length wrest) (cong length lp) ∙ cong suc len-wrest
+
+    pf₁ : suc (length w₂) NatOrder.≤ length i
+    pf₁ = subst (NatOrder._≤_ (suc (length w₂))) (sym len-i) (suc-≤-suc ≤SumLeft)
+
+    pf₂ : suc (length w₄) NatOrder.≤ length i
+    pf₂ = subst (NatOrder._≤_ (suc (length w₄))) (sym len-i) (suc-≤-suc (≤-trans ≤-sucℕ ≤SumRight))
+
+
 Dyck : Grammar ℓ-zero
 Dyck = μ DyckTy _
 
