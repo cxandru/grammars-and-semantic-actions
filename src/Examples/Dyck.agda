@@ -71,6 +71,100 @@ DyckTy _ = ⊕e DyckTag (λ
 Dyck : Grammar ℓ-zero
 Dyck = μ DyckTy _
 
+-- begin Lexicon experiments
+
+data DyckTag' : Type ℓ-zero where
+  O' S' : DyckTag'
+
+data ORules : Type ℓ-zero where
+  O' O\S : ORules
+
+data SRules : Type ℓ-zero where
+  O/S O/S\S : SRules
+
+{-
+Lexicization of the ε-free Dyck lang grammar:
+
+( ↦ O | O\S
+) ↦ O/S | O/S\S
+
+Retrotranslation to a grammar:
+-}
+DyckTy' : DyckTag' → Functor DyckTag'
+DyckTy' O' = ⊕e ORules (λ { O' → k (literal [) ; O\S → k (literal [) ⊗e Var S'})
+DyckTy' S' = ⊕e SRules (λ { O/S → Var O' ⊗e k (literal ]) ; O/S\S → Var O' ⊗e k (literal ]) ⊗e Var S'})
+
+{- Make the lexicon base types names simple again -}
+𝕆 𝕊 : Grammar ℓ-zero
+𝕆 = μ DyckTy' O'
+𝕊 = μ DyckTy' S'
+
+-- Recover the lexicon:
+R1 : (literal [) ⊢ 𝕆
+R1 = roll ∘g σ O' ∘g liftG
+
+R2 : (literal [) ⊢ 𝕊 ⊸ 𝕆
+R2 = ⊸-intro (roll ∘g σ O\S ∘g liftG ,⊗ liftG)
+
+R3 : (literal ]) ⊢ 𝕊 ⟜ 𝕆
+R3 = ⟜-intro (roll ∘g σ O/S ∘g liftG ,⊗ liftG)
+
+R4 : (literal ]) ⊢ 𝕊 ⊸ (𝕊 ⟜ 𝕆)
+R4 = ⊸-intro (⟜-intro (roll ∘g σ O/S\S ∘g liftG ,⊗ (liftG ,⊗ liftG)))
+
+R4' : (literal ]) ⊢ (𝕊 ⊸ 𝕊) ⟜ 𝕆
+R4' = ⟜-intro {A = 𝕆} (⊸-intro (roll ∘g σ O/S\S ∘g (liftG ,⊗ (liftG ,⊗ liftG)) ∘g ⊗-assoc⁻))
+
+-- Example derivations (primed versions using the lexicon rules):
+E1 : (literal [) ⊗ (literal ]) ⊢ 𝕊
+E1 = roll ∘g
+   σ O/S ∘g
+    ⊗-intro
+      (liftG ∘g roll ∘g
+      σ O' ∘g liftG)
+      liftG
+
+E1' : (literal [) ⊗ (literal ]) ⊢ 𝕊
+E1' = ⟜-app ∘g ⊗-intro R1 R3
+
+E2 : (literal [) ⊗ 𝕊 ⊗ (literal ]) ⊢ 𝕊
+E2 = roll ∘g
+   σ O/S ∘g
+   ⊗-intro
+   (liftG ∘g roll ∘g
+     σ O\S ∘g
+       ⊗-intro
+         liftG liftG)
+     liftG
+   ∘g ⊗-assoc
+
+E2' : (literal [) ⊗ 𝕊 ⊗ (literal ]) ⊢ 𝕊
+E2' = (⟜-app ∘g ⊗-intro (⊸-app ∘g ⊗-intro R2 id) R3) ∘g ⊗-assoc
+
+E3 : (literal [) ⊗ (literal ]) ⊗ 𝕊 ⊢ 𝕊
+E3 = roll ∘g
+   σ O/S\S ∘g
+    ⊗-intro ((liftG ∘g roll ∘g
+      σ O' ∘g liftG)) (LiftG⊗LiftG≅ _ _ _ _ .fun)
+
+E3' : (literal [) ⊗ (literal ]) ⊗ 𝕊 ⊢ 𝕊
+E3' = ⟜-app ∘g ⊗-intro R1 (⊸-app ∘g ⊗-intro R4 id)
+
+E3a : (literal [) ⊗ (literal ]) ⊢ 𝕊 ⊸ 𝕊
+E3a = ⊸-intro (roll ∘g σ O/S\S ∘g ⊗-assoc⁻ ∘g ⊗-assoc ∘g ⊗-intro ((liftG ∘g roll ∘g
+      σ O' ∘g liftG)) ((LiftG⊗LiftG≅ _ _ _ _ .fun)) ∘g ⊗-assoc⁻)
+
+E3a' : (literal [) ⊗ (literal ]) ⊢ 𝕊 ⊸ 𝕊
+E3a' = ⟜-app ∘g ⊗-intro R1 R4'
+
+E3b : (literal [) ⊗ (literal ]) ⊗ 𝕊 ⊢ 𝕊
+E3b = (⊸-app ∘g ⊗-intro E3a id) ∘g ⊗-assoc
+
+E3b' : (literal [) ⊗ (literal ]) ⊗ 𝕊 ⊢ 𝕊
+E3b' = (⊸-app ∘g ⊗-intro E3a' id) ∘g ⊗-assoc
+
+-- end Lexicon experiments
+
 isSetGrammarDyck : isSetGrammar Dyck
 isSetGrammarDyck = isSetGrammarμ DyckTy
   (λ _ → isSetDyckTag ,
